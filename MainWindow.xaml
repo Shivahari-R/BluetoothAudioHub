@@ -1,0 +1,80 @@
+﻿<Window x:Class="BluetoothAudioHub.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Dual Audio Sync Hub">
+
+    <Grid Margin="30">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,25">
+            <TextBlock Text="DUAL AUDIO SYNC"
+                       FontSize="26"
+                       FontWeight="Black"
+                       Foreground="#00ADB5"/>
+
+            <TextBlock Text="Route system audio to two Bluetooth devices simultaneously"
+                       FontSize="12"
+                       Foreground="#888888"
+                       Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Device Selection -->
+        <Border Grid.Row="1"
+                Background="#1E1E1E"
+                CornerRadius="8"
+                Padding="20"
+                VerticalAlignment="Top">
+
+            <StackPanel>
+
+                <TextBlock Text="Primary Audio Device (A)"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="#EEEEEE"
+                           Margin="0,0,0,8"/>
+
+                <ComboBox x:Name="DeviceAComboBox"
+                          Height="35"
+                          DisplayMemberPath="Name"/>
+
+                <!-- Spacer -->
+                <Border Height="20" Background="Transparent"/>
+
+                <TextBlock Text="Secondary Audio Device (B)"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="#EEEEEE"
+                           Margin="0,0,0,8"/>
+
+                <ComboBox x:Name="DeviceBComboBox"
+                          Height="35"
+                          DisplayMemberPath="Name"/>
+
+            </StackPanel>
+
+        </Border>
+
+        <!-- Start Button -->
+        <Button x:Name="StartStopButton"
+                Grid.Row="2"
+                Content="START SYNC ENGINE"
+                Height="50"
+                FontSize="16"
+                FontWeight="Bold"
+                Background="#00ADB5"
+                Foreground="#121212"
+                BorderThickness="0"
+                Margin="0,20,0,0"
+                Click="StartStopButton_Click"/>
+
+    </Grid>
+</Window>

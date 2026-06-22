@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BluetoothAudioHub")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+203d72807a042838dc0a7a49244367f2da4fa81c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+50794792b43648c08fe286042860657d320d7634")]
 [assembly: System.Reflection.AssemblyProductAttribute("BluetoothAudioHub")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BluetoothAudioHub")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

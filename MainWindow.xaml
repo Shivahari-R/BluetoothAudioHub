@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         Title="Dual Audio Sync Hub">
 
-    <Grid Margin="30">
+    <Grid Margin="0,0,0,0" Background="#000000">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,64 +14,75 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,25">
+
+        <StackPanel Grid.Row="0" Margin="10,0,0,25">
             <TextBlock Text="DUAL AUDIO SYNC"
                        FontSize="26"
                        FontWeight="Black"
-                       Foreground="#00ADB5"/>
+                       Foreground="#caf200"/>
 
             <TextBlock Text="Route system audio to two Bluetooth devices simultaneously"
                        FontSize="12"
-                       Foreground="#888888"
+                       Foreground="#acc431"
                        Margin="0,5,0,0"/>
         </StackPanel>
 
         <!-- Device Selection -->
-        <Border Grid.Row="1"
-                Background="#1E1E1E"
-                CornerRadius="8"
-                Padding="20"
-                VerticalAlignment="Top">
-
+        <Border Grid.Row="1" Background="#000000" CornerRadius="10" Padding="20" VerticalAlignment="Top" Margin="0,-20,0,0" >
             <StackPanel>
+                <TextBlock Text="Primary Audio Device" FontSize="14" FontWeight="SemiBold" Foreground="#c0f241" Margin="0,0,0,8"/>
+                <ComboBox x:Name="DeviceAComboBox" Height="35" DisplayMemberPath="Name">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="Foreground" Value="#000000"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
 
-                <TextBlock Text="Primary Audio Device (A)"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Foreground="#EEEEEE"
-                           Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="Delay (ms): " Foreground="#AAAAAA" VerticalAlignment="Center" Width="75"/>
+                    <TextBlock x:Name="DelayAText" Text="0" Foreground="#00ADB5" FontWeight="Bold" Width="35" VerticalAlignment="Center"/>
+                    <Slider x:Name="SliderA" Width="340" Maximum="1000" Minimum="0" Value="0" IsSnapToTickEnabled="True" TickFrequency="10" ValueChanged="SliderA_ValueChanged" VerticalAlignment="Center"/>
+                </StackPanel>
 
-                <ComboBox x:Name="DeviceAComboBox"
-                          Height="35"
-                          DisplayMemberPath="Name"/>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="Volume (%): " Foreground="#AAAAAA" VerticalAlignment="Center" Width="75"/>
+                    <TextBlock x:Name="VolAText" Text="100" Foreground="#b6bf02" FontWeight="Bold" Width="35" VerticalAlignment="Center"/>
+                    <Slider x:Name="SliderVolA" Width="340" Maximum="100" Minimum="0" Value="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="SliderVolA_ValueChanged" VerticalAlignment="Center"/>
+                </StackPanel>
 
-                <!-- Spacer -->
-                <Border Height="20" Background="Transparent"/>
+                <TextBlock Text="Secondary Audio Device" FontSize="14" FontWeight="SemiBold" Foreground="#c0f241" Margin="0,0,0,8"/>
+                <ComboBox x:Name="DeviceBComboBox" Height="35" DisplayMemberPath="Name">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="Foreground" Value="#000000"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
 
-                <TextBlock Text="Secondary Audio Device (B)"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Foreground="#EEEEEE"
-                           Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="Delay (ms): " Foreground="#AAAAAA" VerticalAlignment="Center" Width="75"/>
+                    <TextBlock x:Name="DelayBText" Text="0" Foreground="#00ADB5" FontWeight="Bold" Width="35" VerticalAlignment="Center"/>
+                    <Slider x:Name="SliderB" Width="340" Maximum="1000" Minimum="0" Value="0" IsSnapToTickEnabled="True" TickFrequency="10" ValueChanged="SliderB_ValueChanged" VerticalAlignment="Center"/>
+                </StackPanel>
 
-                <ComboBox x:Name="DeviceBComboBox"
-                          Height="35"
-                          DisplayMemberPath="Name"/>
-
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="Volume (%): " Foreground="#AAAAAA" VerticalAlignment="Center" Width="75"/>
+                    <TextBlock x:Name="VolBText" Text="100" Foreground="#b6bf02" FontWeight="Bold" Width="35" VerticalAlignment="Center"/>
+                    <Slider x:Name="SliderVolB" Width="340" Maximum="100" Minimum="0" Value="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="SliderVolB_ValueChanged" VerticalAlignment="Center" Foreground="#b6bf02"/>
+                </StackPanel>
             </StackPanel>
-
         </Border>
-
-        <!-- Start Button -->
+        
+        
         <Button x:Name="StartStopButton"
                 Grid.Row="2"
-                Content="START SYNC ENGINE"
+                Content="START SYNC"
                 Height="50"
                 FontSize="16"
                 FontWeight="Bold"
-                Background="#00ADB5"
-                Foreground="#121212"
+                Background="#320347"
+                Foreground="#EEEEEE"
                 BorderThickness="0"
                 Margin="0,20,0,0"
                 Click="StartStopButton_Click"/>

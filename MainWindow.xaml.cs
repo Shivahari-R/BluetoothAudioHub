@@ -1,19 +1,26 @@
-﻿using NAudio.CoreAudioApi;
-using NAudio.Wave;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
+using NAudio.CoreAudioApi;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace BluetoothAudioHub
 {
     public partial class MainWindow : Window
     {
         private bool isRunning = false;
-        private WasapiLoopbackCapture systemCapture; // The "microphone" listening to your PC audio
-        private WasapiOut outputDeviceA;             // The speaker pushing to Device A
-        private WasapiOut outputDeviceB;             // The speaker pushing to Device B
-        private BufferedWaveProvider bufferA;        // The memory holding Device A's audio chunks
-        private BufferedWaveProvider bufferB;        // The memory holding Device B's audio chunks
+        private WasapiLoopbackCapture systemCapture;
+        private WasapiOut outputDeviceA;
+        private WasapiOut outputDeviceB;
+        private BufferedWaveProvider bufferA;
+        private BufferedWaveProvider bufferB;
+        private VolumeSampleProvider volumeNodeA;
+        private VolumeSampleProvider volumeNodeB;
+
+        // NEW: Windows Master Volume trackers
+        private MMDevice defaultWindowsDevice;
+        private float systemMasterVolume = 1.0f;
 
         public MainWindow()
         {
@@ -33,8 +40,6 @@ namespace BluetoothAudioHub
 
                 foreach (var endpoint in audioEndpoints)
                 {
-                    // CRITICAL FIX: We wrap the extraction in its own try/catch.
-                    // If a "ghost" device throws 0xE000020B, it fails gracefully and skips to the next item.
                     try
                     {
                         string statusIcon = endpoint.State == DeviceState.Active ? "🟢" : "🔴";
@@ -45,7 +50,6 @@ namespace BluetoothAudioHub
                     }
                     catch (Exception)
                     {
-                        // A corrupted device was found. Ignore it and continue the loop.
                         continue;
                     }
                 }
@@ -59,14 +63,68 @@ namespace BluetoothAudioHub
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to load audio hardware: {ex.Message}",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show($"Failed to load audio hardware: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
+
+        private void OnWindowsVolumeChanged(AudioVolumeNotificationData data)
+        {
+            systemMasterVolume = data.MasterVolume;
+            Dispatcher.Invoke(() =>
+            {
+                UpdateVolumeNodes();
+            });
+        }
+
+        private void UpdateVolumeNodes()
+        {
+            string defaultId = defaultWindowsDevice?.ID;
+
+            if (volumeNodeA != null && DeviceAComboBox.SelectedItem is AudioDevice selectedA)
+            {
+                float baseVolA = (float)(SliderVolA.Value / 100.0);
+                volumeNodeA.Volume = (selectedA.Device.ID == defaultId) ? baseVolA : baseVolA * systemMasterVolume;
+            }
+
+            if (volumeNodeB != null && DeviceBComboBox.SelectedItem is AudioDevice selectedB)
+            {
+                float baseVolB = (float)(SliderVolB.Value / 100.0);
+                volumeNodeB.Volume = (selectedB.Device.ID == defaultId) ? baseVolB : baseVolB * systemMasterVolume;
+            }
+        }
+
+        private void SliderA_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (DelayAText != null) DelayAText.Text = $"{e.NewValue:0} ms";
+        }
+
+        private void SliderB_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (DelayBText != null) DelayBText.Text = $"{e.NewValue:0} ms";
+        }
+
+        private void SliderVolA_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (VolAText != null) VolAText.Text = $"{e.NewValue:0} %";
+            UpdateVolumeNodes(); // Recalculate using the new slider value
+        }
+
+        private void SliderVolB_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (VolBText != null) VolBText.Text = $"{e.NewValue:0} %";
+            UpdateVolumeNodes();
+        }
+
+        
+        private int CalculateDelayBytes(int milliseconds, WaveFormat format)
+        {
+            double bytesPerMillisecond = format.AverageBytesPerSecond / 1000.0;
+            int rawBytes = (int)(bytesPerMillisecond * milliseconds);
+            return rawBytes - (rawBytes % format.BlockAlign);
+        }
+
+        // --- The Core Engine ---
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isRunning)
@@ -74,7 +132,6 @@ namespace BluetoothAudioHub
                 var selectedA = DeviceAComboBox.SelectedItem as AudioDevice;
                 var selectedB = DeviceBComboBox.SelectedItem as AudioDevice;
 
-                // Make sure the user picked valid devices that aren't the same
                 if (selectedA == null || selectedB == null || selectedA.Device.ID == selectedB.Device.ID)
                 {
                     MessageBox.Show("Please select two distinct audio devices.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -83,57 +140,84 @@ namespace BluetoothAudioHub
 
                 try
                 {
-                    // 1. Initialize the Loopback Capture (Listens to default PC audio)
+                    var enumerator = new MMDeviceEnumerator();
+                    defaultWindowsDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+
+                    // Grab current Windows volume and start listening for changes
+                    systemMasterVolume = defaultWindowsDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
+                    defaultWindowsDevice.AudioEndpointVolume.OnVolumeNotification += OnWindowsVolumeChanged;
+
                     systemCapture = new WasapiLoopbackCapture();
 
-                    // 2. Create the memory buffers using the exact audio quality the PC is currently using
                     bufferA = new BufferedWaveProvider(systemCapture.WaveFormat) { DiscardOnBufferOverflow = true };
                     bufferB = new BufferedWaveProvider(systemCapture.WaveFormat) { DiscardOnBufferOverflow = true };
 
-                    // 3. Initialize the Outputs targeting the specific Bluetooth hardware IDs
+                    volumeNodeA = new VolumeSampleProvider(bufferA.ToSampleProvider());
+                    volumeNodeB = new VolumeSampleProvider(bufferB.ToSampleProvider());
+
+                    // Apply the initial volume calculations
+                    UpdateVolumeNodes();
+
                     outputDeviceA = new WasapiOut(selectedA.Device, AudioClientShareMode.Shared, false, 50);
                     outputDeviceB = new WasapiOut(selectedB.Device, AudioClientShareMode.Shared, false, 50);
 
-                    outputDeviceA.Init(bufferA);
-                    outputDeviceB.Init(bufferB);
+                    outputDeviceA.Init(volumeNodeA);
+                    outputDeviceB.Init(volumeNodeB);
 
-                    // 4. THE CLONER: Every time the PC makes a sound, copy it to both buffers instantly
+                    int delayMsA = (int)SliderA.Value;
+                    int delayMsB = (int)SliderB.Value;
+
+                    if (delayMsA > 0)
+                    {
+                        int delayBytesA = CalculateDelayBytes(delayMsA, systemCapture.WaveFormat);
+                        bufferA.AddSamples(new byte[delayBytesA], 0, delayBytesA);
+                    }
+
+                    if (delayMsB > 0)
+                    {
+                        int delayBytesB = CalculateDelayBytes(delayMsB, systemCapture.WaveFormat);
+                        bufferB.AddSamples(new byte[delayBytesB], 0, delayBytesB);
+                    }
+
                     systemCapture.DataAvailable += (s, args) =>
                     {
                         bufferA.AddSamples(args.Buffer, 0, args.BytesRecorded);
                         bufferB.AddSamples(args.Buffer, 0, args.BytesRecorded);
                     };
 
-                    // 5. Fire everything up!
                     outputDeviceA.Play();
                     outputDeviceB.Play();
                     systemCapture.StartRecording();
 
-                    // Update UI
                     isRunning = true;
                     StartStopButton.Content = "STOP SYNC ENGINE";
-                    StartStopButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 46, 99)); // Alert Pink
+                    StartStopButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 46, 99));
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Engine failed to start: {ex.Message}", "Audio Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    StopEngine(); // Clean up if it crashed
+                    StopEngine();
                 }
             }
             else
             {
                 StopEngine();
-
-                // Update UI
                 isRunning = false;
                 StartStopButton.Content = "START SYNC ENGINE";
-                StartStopButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 173, 181)); // Teal
+                StartStopButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 173, 181));
             }
         }
 
-        // Helper method to safely shut down the audio streams
         private void StopEngine()
         {
+            // CRITICAl
+            if (defaultWindowsDevice != null)
+            {
+                defaultWindowsDevice.AudioEndpointVolume.OnVolumeNotification -= OnWindowsVolumeChanged;
+                defaultWindowsDevice.Dispose();
+                defaultWindowsDevice = null;
+            }
+
             systemCapture?.StopRecording();
             systemCapture?.Dispose();
             systemCapture = null;
@@ -148,10 +232,11 @@ namespace BluetoothAudioHub
 
             bufferA = null;
             bufferB = null;
+            volumeNodeA = null;
+            volumeNodeB = null;
         }
     }
 
-    // Upgraded to hold the actual Windows Hardware Reference, not just the string name
     public class AudioDevice
     {
         public string Name { get; set; }
